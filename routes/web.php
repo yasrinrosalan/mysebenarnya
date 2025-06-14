@@ -10,13 +10,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Admin\AgencyController;
+use App\Http\Controllers\InquiryController;
 use App\Models\PublicUser;
-
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-*/
 
 // 🌐 Public Landing Page
 Route::get('/', function () {
@@ -35,11 +30,9 @@ Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $requ
     $request->fulfill();
 
     $user = Auth::user();
-
-    // If user is public, mark their public_users record as verified
     if ($user->role === 'public') {
         PublicUser::where('user_id', $user->id)->update([
-            'registered_at' => true,
+            'registered_at' => now(),
         ]);
     }
 
@@ -50,7 +43,6 @@ Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $requ
         default => redirect('/home'),
     };
 })->middleware(['auth', 'signed'])->name('verification.verify');
-
 
 Route::post('/email/verification-notification', function (Request $request) {
     $request->user()->sendEmailVerificationNotification();
@@ -73,12 +65,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/force-password-change', [UserController::class, 'updateForcedPassword'])->name('force.password.update');
 });
 
-// 🧑‍💼 Profile (for all verified users)
+// 🧑‍💼 Profile
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/home', function () {
-        return view('home');
-    })->name('home');
-
+    Route::get('/home', fn() => view('home'))->name('home');
     Route::get('/profile', [UserController::class, 'showProfile'])->name('profile.show');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile/edit', [ProfileController::class, 'update'])->name('profile.update');
@@ -86,36 +75,30 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 // 🧑‍🎓 Public User
 Route::middleware(['auth', 'isVerified', 'isPublic'])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('public.dashboard');
-    })->name('public.dashboard');
+    Route::get('/dashboard', fn() => view('public.dashboard'))->name('public.dashboard');
+
+    // 🔍 Inquiry Routes (Module 2)
+    Route::get('/inquiries', [InquiryController::class, 'index'])->name('public.inquiries.index');
+    Route::get('/inquiries/create', [InquiryController::class, 'create'])->name('public.inquiries.create');
+    Route::post('/inquiries', [InquiryController::class, 'store'])->name('public.inquiries.store');
+    Route::get('/inquiries/public', [InquiryController::class, 'viewPublic'])->name('public.inquiries.public');
 });
-
-
-
 
 // 🏢 Agency User
-Route::middleware(['auth', 'verified', 'isAgency'])->group(function () {
-    Route::get('/agency/dashboard', function () {
-        return view('agency.dashboard');
-    })->name('agency.dashboard');
+Route::middleware(['auth', 'verified', 'isAgency'])->prefix('agency')->name('agency.')->group(function () {
+    Route::get('/dashboard', fn() => view('agency.dashboard'))->name('dashboard');
 
-    // Add more agency-specific routes here
+    // (Coming next) Inquiry assignment tracking, status updates, history
+    // Route::get('/inquiries', [...]);
 });
-
-
 
 // 🛡️ Admin Routes
 Route::middleware(['auth', 'isAdmin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', fn() => view('admin.dashboard'))->name('dashboard');
 
-    // Register new agency
     Route::get('/register-agency', [AgencyController::class, 'create'])->name('register.agency.form');
     Route::post('/register-agency', [AgencyController::class, 'store'])->name('register.agency');
 
-    // User Management
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
     Route::get('/users/filter', [UserManagementController::class, 'filter'])->name('users.filter');
     Route::get('/users/{id}', [UserManagementController::class, 'show'])->name('users.show');
@@ -123,4 +106,14 @@ Route::middleware(['auth', 'isAdmin'])->prefix('admin')->name('admin.')->group(f
     Route::post('/users/{id}/update', [UserManagementController::class, 'update'])->name('users.update');
     Route::delete('/users/{id}', [UserManagementController::class, 'destroy'])->name('users.destroy');
     Route::post('/users/{id}/reset-password', [UserManagementController::class, 'resetPassword'])->name('users.reset_password');
+
+    Route::get('/inquiries', [InquiryController::class, 'adminIndex'])->name('inquiries.index');
+    Route::get('/inquiry-reports', [InquiryController::class, 'report'])->name('inquiries.report');
+    Route::get('/inquiries/manage', [InquiryController::class, 'manage'])->name('inquiries.manage');
+    Route::get('/inquiries/{id}', [InquiryController::class, 'show'])->name('inquiries.show');
+    Route::post('/inquiries/{id}/validate', [InquiryController::class, 'validateInquiry'])->name('inquiries.validate');
+    Route::post('/inquiries/{id}/assign', [InquiryController::class, 'assignInquiry'])->name('inquiries.assign');
+
+    // (Coming next) Inquiry review, filtering, reports
+    // Route::get('/inquiries', [...]);
 });

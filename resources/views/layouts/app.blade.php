@@ -141,14 +141,18 @@
 
             @if($user->isAdminUser())
                 <a href="{{ route('admin.users.index') }}">👥 Manage Users</a>
+                <a href="{{ route('admin.inquiries.manage') }}">📥 Manage Inquiries</a>
                 <a href="{{ route('admin.register.agency.form') }}">🏢 Register Agency</a>
-                <a href="#">📊 Reports</a>
+                <a href="{{ route('admin.inquiries.report') }}">📊 Inquiry Reports</a>
+                
+
             @elseif($user->isAgencyUser())
                 <a href="#">📥 Assigned Inquiries</a>
                 <a href="#">📝 Submit Response</a>
             @elseif($user->isPublicUser())
-                <a href="#">➕ Submit Inquiry</a>
-                <a href="#">📂 My Inquiries</a>
+                <a href="{{ route('public.inquiries.create') }}">➕ Submit Inquiry</a>
+                <a href="{{ route('public.inquiries.index') }}">📂 My Inquiries</a>
+                <a href="{{ route('public.inquiries.public') }}">🌍 Browse Public Inquiries</a>
             @endif
 
             <hr class="border-secondary">
