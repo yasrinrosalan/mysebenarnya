@@ -65,25 +65,21 @@
                 <div class="modal-body row">
                     <!-- Left Column -->
                     <div class="col-md-6">
-                        <!-- Name -->
                         <div class="mb-3">
                             <label class="form-label">Full Name</label>
                             <input type="text" class="form-control" name="name" value="{{ $user->name }}" required>
                         </div>
 
-                        <!-- Username -->
                         <div class="mb-3">
                             <label class="form-label">Username</label>
                             <input type="text" class="form-control" name="username" value="{{ $user->username }}" required>
                         </div>
 
-                        <!-- Email -->
                         <div class="mb-3">
                             <label class="form-label">Email</label>
                             <input type="email" class="form-control" name="email" value="{{ $user->email }}" required>
                         </div>
 
-                        <!-- Role -->
                         <div class="mb-3">
                             <label class="form-label">Role</label>
                             <select class="form-select" name="role" required>
@@ -96,13 +92,11 @@
 
                     <!-- Right Column -->
                     <div class="col-md-6">
-                        <!-- Contact Info -->
                         <div class="mb-3">
                             <label class="form-label">Contact Info</label>
                             <input type="text" class="form-control" name="contact_info" value="{{ $user->contact_info }}">
                         </div>
 
-                        <!-- Verified -->
                         <div class="mb-3">
                             <label class="form-label">Is Verified</label>
                             <select class="form-select" name="is_verified">
@@ -111,7 +105,6 @@
                             </select>
                         </div>
 
-                        <!-- Profile Picture -->
                         <div class="mb-3">
                             <label class="form-label">Profile Picture</label>
                             <input type="file" class="form-control" name="profile_picture">
@@ -134,13 +127,13 @@
                         <td>{{ $user->name }}</td>
                         <td>{{ ucfirst($user->role) }}</td>
                         <td>{{ $user->email }}</td>
-                        <td>{{ $user->created_at->format('d M Y') }}</td>
+                        <td>{{ $user->created_at ? $user->created_at->format('d M Y') : '-' }}</td>
                         <td>
                             <a href="{{ route('admin.users.show', ['id' => $user->user_id]) }}" class="btn btn-sm btn-info">View</a>
-                            <!-- Edit Button -->
-<button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editUserModal{{ $user->user_id }}">
-    Edit
-</button>
+
+                            <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editUserModal{{ $user->user_id }}">
+                                Edit
+                            </button>
 
                             <form action="{{ route('admin.users.destroy', ['id' => $user->user_id]) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this user?');">
                                 @csrf
@@ -152,8 +145,6 @@
                 @endforeach
             </tbody>
         </table>
-        
     </div>
 </div>
-
 @endsection

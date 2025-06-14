@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use App\Models\AgencyUser;
 use Illuminate\Support\Str;
 
@@ -27,8 +28,6 @@ class AgencyController extends Controller
             'agency_contact' => 'required|string|max:255',
         ]);
 
-        // Auto-generate username and password
-        // $generatedUsername = strtolower(Str::slug($request->agency_name)) . rand(100, 999);
         $generatedPassword = Str::random(10);
 
         $user = User::create([
@@ -38,11 +37,9 @@ class AgencyController extends Controller
             'password' => Hash::make($generatedPassword),
             'contact_info' => $request->agency_contact,
             'role' => 'agency',
-            'is_verified' => 1,
+            'email_verified_at' => now(), // ✅ use email_verified_at
         ]);
 
-
-        // Create agency user profile
         AgencyUser::create([
             'user_id' => $user->user_id,
             'agency_name' => $request->agency_name,
@@ -52,7 +49,14 @@ class AgencyController extends Controller
             'admin_id' => Auth::id(),
         ]);
 
-        // OPTIONAL: show generated credentials on screen
+        // ✅ Log credentials
+        Log::info('New agency registered', [
+            'email' => $user->email,
+            'username' => $user->username,
+            'password' => $generatedPassword,
+        ]);
+
+        // ✅ Show credentials on screen (your original line)
         return back()->with('success', 'Agency registered successfully.')->with([
             'generated_username' => $request->agency_name,
             'generated_password' => $generatedPassword,

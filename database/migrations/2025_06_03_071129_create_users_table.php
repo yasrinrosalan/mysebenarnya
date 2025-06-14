@@ -17,10 +17,10 @@ return new class extends Migration {
             $table->string('contact_info')->nullable();
             $table->string('profile_picture_url')->nullable();
             $table->string('role');
+            $table->rememberToken(); // <-- ✅ Add this line
             $table->timestamps();
         });
     }
-
 
     public function down(): void
     {

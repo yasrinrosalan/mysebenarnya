@@ -36,10 +36,29 @@ class LoginController extends Controller
      */
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'username' => ['required', 'string'],
-            'password' => ['required', 'string'],
-        ]);
+        $loginField = filter_var($request->input('username'), FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+
+        // Retrieve user first
+        $user = \App\Models\User::where($loginField, $request->input('username'))->first();
+
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'username' => __('These credentials do not match our records.'),
+            ]);
+        }
+
+        // If the user is 'public', enforce login via email only
+        if ($user->role === 'public' && $loginField !== 'email') {
+            throw ValidationException::withMessages([
+                'username' => __('Public users must log in using email.'),
+            ]);
+        }
+
+        // Now attempt login
+        $credentials = [
+            $loginField => $request->input('username'),
+            'password' => $request->input('password'),
+        ];
 
         $remember = $request->filled('remember');
 
@@ -53,6 +72,7 @@ class LoginController extends Controller
             'username' => __('These credentials do not match our records.'),
         ]);
     }
+
 
     /**
      * Log the user out of the application.

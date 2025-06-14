@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use App\Http\Controllers\Admin\AuditLogController;
+use App\Models\AuditLog;
 
 class UserManagementController extends Controller
 {
@@ -26,8 +28,6 @@ class UserManagementController extends Controller
         return view('admin.users.index', compact('users'));
     }
 
-
-
     public function edit($id)
     {
         $user = User::findOrFail($id);
@@ -36,34 +36,19 @@ class UserManagementController extends Controller
 
     public function update(Request $request, $id)
     {
+        $user = User::findOrFail($id);
+
         $request->validate([
             'name' => 'required|string|max:255',
-            'username' => 'required|string|max:255|unique:users,username,' . $id,
-            'email' => 'required|email|unique:users,email,' . $id,
-            'role' => 'required|in:admin,agency,public',
-            'contact_info' => 'nullable|string|max:255',
-            'is_verified' => 'required|boolean',
-            'profile_picture' => 'nullable|image|max:2048',
+            'username' => 'required|string|max:255|unique:users,username,' . $user->user_id . ',user_id',
+            'email' => 'required|email|max:255|unique:users,email,' . $user->user_id . ',user_id',
+            // ... other rules
         ]);
 
-        $user = User::findOrFail($id);
-        $user->name = $request->name;
-        $user->username = $request->username;
-        $user->email = $request->email;
-        $user->role = $request->role;
-        $user->contact_info = $request->contact_info;
-        $user->is_verified = $request->is_verified;
-
-        if ($request->hasFile('profile_picture')) {
-            $path = $request->file('profile_picture')->store('profile_pictures', 'public');
-            $user->profile_picture = $path;
-        }
-
-        $user->save();
+        $user->update($request->all());
 
         return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
     }
-
 
 
     public function show($id)
@@ -83,7 +68,7 @@ class UserManagementController extends Controller
     public function resetPassword($id)
     {
         $user = User::findOrFail($id);
-        $user->password = Hash::make('defaultpassword123'); // or generate random
+        $user->password = Hash::make('defaultpassword123'); // or use Str::random(12)
         $user->force_password_change = true;
         $user->save();
 

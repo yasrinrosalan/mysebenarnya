@@ -15,7 +15,7 @@
             <p><strong>Role:</strong> {{ ucfirst(auth()->user()->role) }}</p>
 
             @if(auth()->user()->isAgencyUser())
-                <p><strong>Agency Name:</strong> {{ auth()->user()->agency_name ?? 'N/A' }}</p>
+            <p><strong>Agency Name:</strong> {{ auth()->user()->agencyUser?->agency_name ?? 'N/A' }}</p>
             @endif
 
             <p><strong>Contact Info:</strong> {{ auth()->user()->contact_info ?? 'N/A' }}</p>

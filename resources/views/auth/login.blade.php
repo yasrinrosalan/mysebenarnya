@@ -7,10 +7,10 @@
     @csrf
 
     <div class="mb-3">
-        <label for="username" class="form-label">Username</label>
+        <label for="username" class="form-label">Username or Email</label>
         <input type="text" name="username" id="username" class="form-control" required autofocus>
     </div>
-    
+
 
     <div class="mb-3">
         <label for="password" class="form-label">Password</label>

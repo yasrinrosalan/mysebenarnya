@@ -12,6 +12,14 @@
                 </div>
                 <div class="card-body">
 
+                    {{-- Success Message --}}
+                    @if (session('success'))
+                        <div class="alert alert-success">
+                            {{ session('success') }}
+                        </div>
+                    @endif
+
+                    {{-- Validation Errors --}}
                     @if ($errors->any())
                         <div class="alert alert-danger">
                             <ul class="mb-0">
@@ -22,12 +30,14 @@
                         </div>
                     @endif
 
+                    {{-- Password Change Form --}}
                     <form method="POST" action="{{ route('password.force.change') }}">
                         @csrf
 
                         <div class="mb-3">
                             <label for="password">New Password</label>
-                            <input type="password" name="password" id="password" class="form-control" required>
+                            <input type="password" name="password" id="password" class="form-control" required minlength="8">
+                            <small class="text-muted">Password must be at least 8 characters long.</small>
                         </div>
 
                         <div class="mb-3">

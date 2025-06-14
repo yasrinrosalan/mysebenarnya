@@ -18,7 +18,6 @@ class User extends Authenticatable
         'username',
         'password',
         'contact_info',
-        'is_verified',
         'profile_picture_url',
         'role',
     ];
@@ -29,10 +28,10 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'is_verified' => 'boolean',
+        'email_verified_at' => 'datetime',
     ];
 
-    // Relationships
+    // 🔗 Relationships
     public function adminUser()
     {
         return $this->hasOne(AdminUser::class, 'user_id');
@@ -53,24 +52,29 @@ class User extends Authenticatable
         return $this->hasMany(AuditLog::class, 'user_id');
     }
 
-    // Role helper methods
-    public function isAdminUser()
+    // 🛡️ Role Checkers (based on role column)
+    public function isAdminUser(): bool
     {
-        return $this->adminUser()->exists();
+        return $this->role === 'admin';
     }
 
-    public function isAgencyUser()
+    public function isAgencyUser(): bool
     {
-        return $this->agencyUser()->exists();
+        return $this->role === 'agency';
     }
 
-    public function isPublicUser()
+    public function isPublicUser(): bool
     {
-        return $this->publicUser()->exists();
+        return $this->role === 'public';
     }
 
-    // Optional: role string accessor (returns 'admin', 'agency', or 'public')
-    public function getRoleAttribute()
+    public function isMcmcUser(): bool
+    {
+        return $this->role === 'mcmc';
+    }
+
+    // 🧠 Derived Role (fallback)
+    public function getDetectedRoleAttribute(): string
     {
         if ($this->isAdminUser()) {
             return 'admin';
@@ -78,7 +82,9 @@ class User extends Authenticatable
             return 'agency';
         } elseif ($this->isPublicUser()) {
             return 'public';
+        } elseif ($this->isMcmcUser()) {
+            return 'mcmc';
         }
-        return null;
+        return 'unknown';
     }
 }

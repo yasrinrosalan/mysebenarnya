@@ -11,13 +11,17 @@
         <p><strong>Email:</strong> {{ $user->email }}</p>
         <p><strong>Role:</strong> {{ ucfirst($user->role) }}</p>
         <p><strong>Contact Info:</strong> {{ $user->contact_info ?? '-' }}</p>
-        <p><strong>Registered At:</strong> {{ $user->created_at->format('Y-m-d H:i') }}</p>
+        <p><strong>Registered At:</strong> {{ optional($user->created_at)->format('Y-m-d H:i') }}</p>
 
         @if($user->role === 'agency')
             <p><strong>Agency Name:</strong> {{ $user->agency_name }}</p>
             <p><strong>Agency Contact:</strong> {{ $user->agencyUser->agency_contact ?? '-' }}</p>
         @elseif($user->role === 'admin')
             <p><strong>Department:</strong> {{ $user->adminUser->department ?? '-' }}</p>
+            <form action="{{ route('admin.users.reset-password', $user->user_id) }}" method="POST" class="mt-3">
+                @csrf
+                <button type="submit" class="btn btn-warning">Reset Password</button>
+            </form>
         @endif
 
         <a href="{{ route('admin.users.index') }}" class="btn btn-secondary mt-3">Back to List</a>

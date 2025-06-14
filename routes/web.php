@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PasswordChangeController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\UserController;
@@ -10,7 +11,9 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Admin\AgencyController;
+use App\Http\Controllers\Admin\AuditLogController;
 use App\Models\PublicUser;
+use App\Http\Controllers\AdminController;
 
 /*
 |--------------------------------------------------------------------------
@@ -33,10 +36,8 @@ Route::get('/email/verify', function () {
 
 Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
     $request->fulfill();
-
     $user = Auth::user();
 
-    // If user is public, mark their public_users record as verified
     if ($user->role === 'public') {
         PublicUser::where('user_id', $user->id)->update([
             'registered_at' => true,
@@ -50,7 +51,6 @@ Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $requ
         default => redirect('/home'),
     };
 })->middleware(['auth', 'signed'])->name('verification.verify');
-
 
 Route::post('/email/verification-notification', function (Request $request) {
     $request->user()->sendEmailVerificationNotification();
@@ -69,11 +69,11 @@ Route::post('/admin/forgot-password', [ForgotPasswordController::class, 'sendAdm
 
 // ✅ Force Password Change
 Route::middleware(['auth'])->group(function () {
-    Route::get('/force-password-change', [UserController::class, 'showForcePasswordForm'])->name('force.password.form');
-    Route::post('/force-password-change', [UserController::class, 'updateForcedPassword'])->name('force.password.update');
+    Route::get('/force-password-change', [UserController::class, 'showForcePasswordForm'])->name('password.force.change.form');
+    Route::post('/force-password-change', [PasswordChangeController::class, 'updatePassword'])->name('password.force.change');
 });
 
-// 🧑‍💼 Profile (for all verified users)
+// 🧑‍💼 Profile & Registration Info (for all verified users)
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/home', function () {
         return view('home');
@@ -84,18 +84,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/profile/edit', [ProfileController::class, 'update'])->name('profile.update');
 });
 
-// 🧑‍🎓 Public User
+// 🧑‍🎓 Public User Dashboard
 Route::middleware(['auth', 'isVerified', 'isPublic'])->group(function () {
     Route::get('/dashboard', function () {
         return view('public.dashboard');
     })->name('public.dashboard');
 });
 
-
-
-
-// 🏢 Agency User
-Route::middleware(['auth', 'verified', 'isAgency'])->group(function () {
+// 🏢 Agency User Dashboard
+Route::middleware(['auth', 'verified', 'isAgency', 'force.password.change'])->group(function () {
     Route::get('/agency/dashboard', function () {
         return view('agency.dashboard');
     })->name('agency.dashboard');
@@ -103,13 +100,9 @@ Route::middleware(['auth', 'verified', 'isAgency'])->group(function () {
     // Add more agency-specific routes here
 });
 
-
-
 // 🛡️ Admin Routes
 Route::middleware(['auth', 'isAdmin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
 
     // Register new agency
     Route::get('/register-agency', [AgencyController::class, 'create'])->name('register.agency.form');
@@ -117,10 +110,16 @@ Route::middleware(['auth', 'isAdmin'])->prefix('admin')->name('admin.')->group(f
 
     // User Management
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
-    Route::get('/users/filter', [UserManagementController::class, 'filter'])->name('users.filter');
     Route::get('/users/{id}', [UserManagementController::class, 'show'])->name('users.show');
     Route::get('/users/{id}/edit', [UserManagementController::class, 'edit'])->name('users.edit');
-    Route::post('/users/{id}/update', [UserManagementController::class, 'update'])->name('users.update');
+    Route::put('/users/{id}', [UserManagementController::class, 'update'])->name('users.update');
     Route::delete('/users/{id}', [UserManagementController::class, 'destroy'])->name('users.destroy');
-    Route::post('/users/{id}/reset-password', [UserManagementController::class, 'resetPassword'])->name('users.reset_password');
+    Route::post('/users/{id}/reset-password', [UserManagementController::class, 'resetPassword'])->name('users.reset-password');
+
+    // 📜 Activity Logs
+    Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+    Route::get('/audit-logs/{id}', [AuditLogController::class, 'show'])->name('audit-logs.show');
+
+    Route::get('/admin/reports/export-excel', [AdminController::class, 'exportExcel'])->name('reports.excel');
+    Route::get('/admin/reports/export-pdf', [AdminController::class, 'exportPDF'])->name('reports.pdf');
 });

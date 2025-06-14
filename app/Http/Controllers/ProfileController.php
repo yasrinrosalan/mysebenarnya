@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\AuditLog;
 
 class ProfileController extends Controller
 {
@@ -20,7 +21,9 @@ class ProfileController extends Controller
      */
     public function update(Request $request)
     {
-        $user = Auth::user();
+        // ✅ DO THIS ONCE
+        /** @var \App\Models\User $user */
+        $user = Auth::user(); // do NOT re-call this later!
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -31,29 +34,60 @@ class ProfileController extends Controller
             'agency_contact' => 'nullable|string|max:255',
         ]);
 
-        $user->name = $request->name;
-        $user->contact_info = $request->contact_info;
+        $changes = [];
+
+        if ($user->name !== $request->name) {
+            $changes['name'] = ['old' => $user->name, 'new' => $request->name];
+            $user->name = $request->name;
+        }
+
+        if ($user->contact_info !== $request->contact_info) {
+            $changes['contact_info'] = ['old' => $user->contact_info, 'new' => $request->contact_info];
+            $user->contact_info = $request->contact_info;
+        }
 
         if ($request->hasFile('profile_picture')) {
             $filename = 'profile_' . $user->id . '.' . $request->file('profile_picture')->getClientOriginalExtension();
             $path = $request->file('profile_picture')->storeAs('profile_pictures', $filename, 'public');
+            $changes['profile_picture_url'] = ['old' => $user->profile_picture_url, 'new' => $path];
             $user->profile_picture_url = $path;
         }
 
         // Admin-only updates
         if ($user->isAdminUser() && $user->adminUser) {
-            $user->adminUser->department = $request->department;
+            if ($user->adminUser->department !== $request->department) {
+                $changes['department'] = ['old' => $user->adminUser->department, 'new' => $request->department];
+                $user->adminUser->department = $request->department;
+            }
             $user->adminUser->save();
         }
 
         // Agency-only updates
         if ($user->isAgencyUser() && $user->agencyUser) {
-            $user->agencyUser->agency_name = $request->agency_name;
-            $user->agencyUser->agency_contact = $request->agency_contact;
+            if ($user->agencyUser->agency_name !== $request->agency_name) {
+                $changes['agency_name'] = ['old' => $user->agencyUser->agency_name, 'new' => $request->agency_name];
+                $user->agencyUser->agency_name = $request->agency_name;
+            }
+            if ($user->agencyUser->agency_contact !== $request->agency_contact) {
+                $changes['agency_contact'] = ['old' => $user->agencyUser->agency_contact, 'new' => $request->agency_contact];
+                $user->agencyUser->agency_contact = $request->agency_contact;
+            }
             $user->agencyUser->save();
         }
 
+        // ✅ Save main user profile changes
         $user->save();
+
+        // ✅ Save to audit log ONLY if user is not null
+        if (!empty($changes) && $user && $user->id) {
+            AuditLog::create([
+                'action'     => 'profile_update',
+                'timestamp'  => now(),
+                'details'    => json_encode($changes),
+                'inquiry_id' => null,
+                'user_id'    => $user->id, // ✅ Confirmed valid
+            ]);
+        }
 
         return redirect()->route('profile.edit')->with('success', 'Profile updated successfully.');
     }
