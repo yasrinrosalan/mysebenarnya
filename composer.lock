@@ -7,6 +7,7 @@
     "content-hash": "0a4d126adc2e9b1e4fe808389e798b4c",
     "packages": [
         {
+<<<<<<< HEAD
             "name": "barryvdh/laravel-dompdf",
             "version": "v3.1.1",
             "source": {
@@ -93,6 +94,17 @@
             },
             "dist": {
                 "type": "zip",
+=======
+            "name": "brick/math",
+            "version": "0.13.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/brick/math.git",
+                "reference": "fc7ed316430118cc7836bf45faff18d5dfc8de04"
+            },
+            "dist": {
+                "type": "zip",
+>>>>>>> module-2
                 "url": "https://api.github.com/repos/brick/math/zipball/fc7ed316430118cc7836bf45faff18d5dfc8de04",
                 "reference": "fc7ed316430118cc7836bf45faff18d5dfc8de04",
                 "shasum": ""
@@ -4226,6 +4238,7 @@
                 "source": "https://github.com/ramsey/uuid/tree/4.8.1"
             },
             "time": "2025-06-01T06:28:46+00:00"
+<<<<<<< HEAD
         },
         {
             "name": "sabberworm/php-css-parser",
@@ -4291,6 +4304,8 @@
                 "source": "https://github.com/MyIntervals/PHP-CSS-Parser/tree/v8.8.0"
             },
             "time": "2025-03-23T17:59:05+00:00"
+=======
+>>>>>>> module-2
         },
         {
             "name": "symfony/clock",

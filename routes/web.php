@@ -13,13 +13,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\AgencyController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\InquiryController;
 use App\Models\PublicUser;
-
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-*/
 
 // 🌐 Public Landing Page
 Route::get('/', function () {
@@ -74,6 +69,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // 🧑‍🎓 Public User Dashboard
 Route::middleware(['auth', 'isVerified', 'isPublic'])->group(function () {
     Route::get('/dashboard', fn() => view('public.dashboard'))->name('public.dashboard');
+
+     // 🔍 Inquiry Routes (Module 2)
+    Route::get('/inquiries', [InquiryController::class, 'index'])->name('public.inquiries.index');
+    Route::get('/inquiries/create', [InquiryController::class, 'create'])->name('public.inquiries.create');
+    Route::post('/inquiries', [InquiryController::class, 'store'])->name('public.inquiries.store');
+    Route::get('/inquiries/public', [InquiryController::class, 'viewPublic'])->name('public.inquiries.public');
 });
 
 // 🏢 Agency User Dashboard
@@ -86,7 +87,6 @@ Route::middleware(['auth', 'verified', 'isAgency', 'force.password.change'])->gr
 Route::middleware(['auth', 'isAdmin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
 
-    // Register new agency
     Route::get('/register-agency', [AgencyController::class, 'create'])->name('register.agency.form');
     Route::post('/register-agency', [AgencyController::class, 'store'])->name('register.agency');
 
@@ -105,4 +105,11 @@ Route::middleware(['auth', 'isAdmin'])->prefix('admin')->name('admin.')->group(f
     // Reports
     Route::get('/reports/export-excel', [AdminController::class, 'exportExcel'])->name('reports.excel');
     Route::get('/reports/export-pdf', [AdminController::class, 'exportPDF'])->name('reports.pdf');
+
+    Route::get('/inquiries', [InquiryController::class, 'adminIndex'])->name('inquiries.index');
+    Route::get('/inquiry-reports', [InquiryController::class, 'report'])->name('inquiries.report');
+    Route::get('/inquiries/manage', [InquiryController::class, 'manage'])->name('inquiries.manage');
+    Route::get('/inquiries/{id}', [InquiryController::class, 'show'])->name('inquiries.show');
+    Route::post('/inquiries/{id}/validate', [InquiryController::class, 'validateInquiry'])->name('inquiries.validate');
+    Route::post('/inquiries/{id}/assign', [InquiryController::class, 'assignInquiry'])->name('inquiries.assign');
 });

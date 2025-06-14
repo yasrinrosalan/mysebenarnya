@@ -133,16 +133,20 @@
         <a href="{{ $dashboardUrl }}">🏠 Dashboard</a>
 
         @if($user->isAdminUser())
-            <a href="{{ route('admin.users.index') }}">👥 Manage Users</a>
-            <a href="{{ route('admin.register.agency.form') }}">🏢 Register Agency</a>
-            {{-- <a href="{{ route('admin.reports.index') }}">📊 Reports</a> --}}
-        @elseif($user->isAgencyUser())
-            {{-- <a href="{{ route('agency.assigned.inquiries') }}">📥 Assigned Inquiries</a> --}}
-            {{-- <a href="{{ route('agency.submit.response') }}">📝 Submit Response</a> --}}
-        @elseif($user->isPublicUser())
-            <a href="{{ route('inquiries.create') }}">➕ Submit Inquiry</a>
-            <a href="{{ route('inquiries.mine') }}">📂 My Inquiries</a>
-        @endif
+                <a href="{{ route('admin.users.index') }}">👥 Manage Users</a>
+                <a href="{{ route('admin.inquiries.manage') }}">📥 Manage Inquiries</a>
+                <a href="{{ route('admin.register.agency.form') }}">🏢 Register Agency</a>
+                <a href="{{ route('admin.inquiries.report') }}">📊 Inquiry Reports</a>
+                
+
+            @elseif($user->isAgencyUser())
+                <a href="#">📥 Assigned Inquiries</a>
+                <a href="#">📝 Submit Response</a>
+            @elseif($user->isPublicUser())
+                <a href="{{ route('public.inquiries.create') }}">➕ Submit Inquiry</a>
+                <a href="{{ route('public.inquiries.index') }}">📂 My Inquiries</a>
+                <a href="{{ route('public.inquiries.public') }}">🌍 Browse Public Inquiries</a>
+            @endif
 
         <hr class="border-secondary">
         <a href="{{ route('profile.edit') }}" class="sidebar-link">⚙️ Edit Profile</a>
