@@ -11,7 +11,6 @@
         <input type="text" name="username" id="username" class="form-control" required autofocus>
     </div>
 
-
     <div class="mb-3">
         <label for="password" class="form-label">Password</label>
         <input id="password" type="password" class="form-control" name="password" required>
@@ -26,8 +25,13 @@
         <button type="submit" class="btn btn-primary">Login</button>
     </div>
 
-    <div class="text-center">
+    <div class="text-center mb-2">
         <a href="{{ route('password.request') }}">Forgot Your Password?</a>
+    </div>
+
+    <div class="text-center">
+        <span>Don't have an account?</span>
+        <a href="{{ route('register') }}" class="btn btn-link">Register here</a>
     </div>
 </form>
 @endsection

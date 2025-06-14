@@ -67,10 +67,17 @@
                             </div>
                         @endif
 
-                        {{-- Submit --}}
-                        <div class="d-flex justify-content-end mt-4">
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </div>
+                        {{-- Submit & Change Password --}}
+<div class="d-flex justify-content-between mt-4">
+    <a href="{{ route('password.force.change.form') }}" class="btn btn-outline-secondary">
+        Change Password
+    </a>
+
+    <button type="submit" class="btn btn-primary">
+        Save Changes
+    </button>
+</div>
+
 
                     </form>
                 </div>

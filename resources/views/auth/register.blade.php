@@ -3,12 +3,16 @@
 @section('title', 'Register')
 
 @section('content')
+{{-- <div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+
+        <h4 class="mb-3 text-center text-primary fw-bold">Create Your Account</h4> --}}
 
         @if ($errors->any())
             <div class="alert alert-danger small">
-                <ul class="mb-0">
+                <ul class="mb-0 ps-3">
                     @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
+                        <li class="small">{{ $error }}</li>
                     @endforeach
                 </ul>
             </div>
@@ -28,8 +32,8 @@
             </div>
 
             <div class="mb-3">
-                <label for="contact_info" class="form-label">Phone</label>
-                <input id="contact_info" type="text" class="form-control" name="contact_info" value="{{ old('contact_info') }}" required>
+                <label for="contact_info" class="form-label">Phone Number</label>
+                <input id="contact_info" type="tel" class="form-control" name="contact_info" value="{{ old('contact_info') }}" required>
             </div>
 
             <div class="mb-3">
@@ -47,12 +51,16 @@
                 <input id="password-confirm" type="password" class="form-control" name="password_confirmation" required>
             </div>
 
-            <div class="d-grid">
-                <button type="submit" class="btn btn-success">Register</button>
+            <div class="d-grid mt-4">
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-person-plus-fill me-1"></i> Register
+                </button>
             </div>
 
-            <div class="mt-3 text-center">
+            <div class="text-center mt-3">
                 <small>Already have an account? <a href="{{ route('login') }}">Login here</a></small>
             </div>
         </form>
+    {{-- </div>
+</div> --}}
 @endsection
