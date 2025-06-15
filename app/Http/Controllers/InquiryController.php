@@ -73,30 +73,103 @@ class InquiryController extends Controller
 
 
     public function manage(Request $request)
-    {
-        $query = Inquiry::with(['category', 'attachments', 'publicUser']);
+{
+    $baseQuery = Inquiry::with(['category', 'attachments', 'publicUser']);
 
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->filled('from') && $request->filled('to')) {
-            $query->whereBetween('submitted_at', [$request->from, $request->to]);
-        }
-
-        if ($request->filled('agency_id')) {
-            $query->whereHas('assignment', function ($q) use ($request) {
-                $q->where('agency_user_id', $request->agency_id);
-            });
-        }
-
-        $inquiries = $query->orderByDesc('submitted_at')->get();
-
-        $agencies = User::where('role', 'agency')->get(); // for filter dropdown
-
-        return view('admin.inquiries.manage', compact('inquiries', 'agencies'));
+    // Apply filters to the base query BEFORE splitting
+    if ($request->filled('from') && $request->filled('to')) {
+        $baseQuery->whereBetween('submitted_at', [$request->from, $request->to]);
     }
+
+    if ($request->filled('agency_id')) {
+        $baseQuery->whereHas('assignments', function ($q) use ($request) {
+            $q->where('agency_user_id', $request->agency_id);
+        });
+    }
+
+    if ($request->filled('status') && $request->status !== 'pending') {
+        // Only apply non-pending status to history inquiries
+        $statusFilter = $request->status;
+    } else {
+        $statusFilter = null;
+    }
+
+    // Now clone after filters
+    $pendingInquiries = (clone $baseQuery)->whereIn('status', ['pending', 'validated', 'rejected'])->get();
+
+    $historyQuery = (clone $baseQuery)->where('status', '!=', 'pending');
+    if ($statusFilter) {
+        $historyQuery->where('status', $statusFilter);
+    }
+
+    $historyInquiries = $historyQuery->orderByDesc('submitted_at')->get();
+
+    $agencies = User::where('role', 'agency')->get();
+
+    return view('admin.inquiries.manage', compact(
+        'pendingInquiries',
+        'historyInquiries',
+        'agencies'
+    ));
+}
+
+public function handle(Request $request, $id)
+{
+    $inquiry = Inquiry::findOrFail($id);
+    $action = $request->input('action');
+    $comment = $request->input('comment');
+
+    if ($action === 'assign') {
+        $request->validate([
+            'agency_user_id' => 'required|exists:agency_user,user_id',
+            'comment' => 'required|string',
+        ]);
+
+        Assignment::create([
+            'inquiry_id' => $id,
+            'agency_user_id' => $request->agency_user_id,
+            'status' => 'assigned',
+            'assigned_at' => now(),
+            'last_updated_at' => now(),
+            'comment' => $comment,
+        ]);
+
+        $inquiry->update(['status' => 'assigned']);
+
+        AuditLog::create([
+            'action' => 'Assigned Inquiry',
+            'details' => $comment,
+            'timestamp' => now(),
+            'inquiry_id' => $id,
+            'user_id' => Auth::id(),
+        ]);
+
+        return redirect()->back()->with('success', 'Inquiry assigned to agency.');
+    }
+
+    if ($action === 'discard') {
+        $inquiry->update([
+            'status' => 'discarded',
+            'review_notes' => $comment,
+        ]);
+
+        AuditLog::create([
+            'action' => 'Discarded Inquiry',
+            'details' => $comment,
+            'timestamp' => now(),
+            'inquiry_id' => $id,
+            'user_id' => Auth::id(),
+        ]);
+
+        // TODO: optionally notify the public user
+
+        return redirect()->back()->with('success', 'Inquiry discarded and public user notified.');
+    }
+
+    return redirect()->back()->with('error', 'Invalid action.');
+}
+
+
 
     public function report(Request $request)
 {
@@ -160,6 +233,57 @@ class InquiryController extends Controller
         $categories = Category::all();
         return view('public.inquiries.create', compact('categories'));
     }
+
+    public function agencyIndex(Request $request)
+{
+    $userId = Auth::id();
+
+    $query = Inquiry::whereHas('assignments', function ($q) use ($userId) {
+        $q->where('agency_user_id', $userId);
+    })->with([
+        'category',
+        'assignments' => function ($q) use ($userId) {
+            $q->where('agency_user_id', $userId);
+        }
+    ]);
+
+    // Filter by inquiry status from assignment
+    if ($request->filled('status')) {
+        $query->whereHas('assignments', function ($q) use ($request, $userId) {
+            $q->where('agency_user_id', $userId)
+              ->where('status', $request->status);
+        });
+    }
+
+    // Filter by date
+    if ($request->filled('from') && $request->filled('to')) {
+        $query->whereBetween('submitted_at', [$request->from, $request->to]);
+    }
+
+    // Filter by category
+    if ($request->filled('category_id')) {
+        $query->where('category_id', $request->category_id);
+    }
+
+    $inquiries = $query->orderByDesc('submitted_at')->get();
+    $categories = Category::all();
+
+    return view('agency.inquiries.index', compact('inquiries', 'categories'));
+}
+
+public function agencyShow($id)
+{
+    $inquiry = Inquiry::with([
+        'attachments',
+        'category',
+        'assignments',
+        'auditLogs'
+    ])->findOrFail($id);
+
+    return view('agency.inquiries.show', compact('inquiry'));
+}
+
+
 
     // PUBLIC: Store New Inquiry
 public function store(Request $request)

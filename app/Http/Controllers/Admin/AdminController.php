@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\AuditLog;
+use App\Models\Category;
+use App\Models\Inquiry;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\UsersReportExport;
 use PDF;
@@ -21,8 +23,32 @@ class AdminController extends Controller
         $endDate = $request->input('end_date');
         $role = $request->input('role');
         $agencyUserId = $request->input('agency_id');
+        $usersByRole = User::selectRaw('role, COUNT(*) as count')
+            ->groupBy('role')
+            ->pluck('count', 'role');
+        $monthlyRegistrations = User::selectRaw('MONTH(created_at) as month, COUNT(*) as total')
+            ->whereYear('created_at', now()->year)
+            ->groupBy('month')
+            ->orderBy('month')
+            ->pluck('total', 'month');
+
+        $inquiryStatusChart = Inquiry::selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $inquiryByCategoryChart = Category::withCount('inquiries')->get()->pluck('inquiries_count', 'name');
+
+        $agencies = User::where('role', 'agency')->get();
 
         $userQuery = User::query();
+
+        return view('admin.dashboard', compact(
+            'usersByRole',
+            'monthlyRegistrations',
+            'agencies',
+            'inquiryByCategoryChart',
+            'inquiryStatusChart'
+        ));
 
         if ($startDate) {
             $userQuery->whereDate('created_at', '>=', $startDate);

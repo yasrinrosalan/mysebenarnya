@@ -80,8 +80,19 @@ Route::middleware(['auth', 'isVerified', 'isPublic'])->group(function () {
 // 🏢 Agency User Dashboard
 Route::middleware(['auth', 'verified', 'isAgency', 'force.password.change'])->group(function () {
     Route::get('/agency/dashboard', fn() => view('agency.dashboard'))->name('agency.dashboard');
+
+    Route::get('/inquiries', [InquiryController::class, 'agencyIndex'])->name('agency.inquiries.index');
+    Route::get('/inquiries/{id}', [InquiryController::class, 'agencyShow'])->name('agency.inquiries.show');
+
+
     // Add more agency routes here
 });
+
+Route::middleware(['auth', 'isAgency'])->group(function () {
+    Route::get('/agency/inquiries/{id}', [InquiryController::class, 'agencyShow'])->name('agency.inquiries.show');
+});
+
+
 
 // 🛡️ Admin Dashboard & Management
 Route::middleware(['auth', 'isAdmin'])->prefix('admin')->name('admin.')->group(function () {
@@ -89,6 +100,8 @@ Route::middleware(['auth', 'isAdmin'])->prefix('admin')->name('admin.')->group(f
 
     Route::get('/register-agency', [AgencyController::class, 'create'])->name('register.agency.form');
     Route::post('/register-agency', [AgencyController::class, 'store'])->name('register.agency');
+    Route::post('/inquiries/{id}/handle', [InquiryController::class, 'handle'])->name('inquiries.handle');
+
 
     // User management
     Route::get('/users', [AdminController::class, 'index'])->name('users.index');
@@ -112,4 +125,5 @@ Route::middleware(['auth', 'isAdmin'])->prefix('admin')->name('admin.')->group(f
     Route::get('/inquiries/{id}', [InquiryController::class, 'show'])->name('inquiries.show');
     Route::post('/inquiries/{id}/validate', [InquiryController::class, 'validateInquiry'])->name('inquiries.validate');
     Route::post('/inquiries/{id}/assign', [InquiryController::class, 'assignInquiry'])->name('inquiries.assign');
+
 });

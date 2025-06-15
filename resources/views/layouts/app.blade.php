@@ -140,8 +140,9 @@
                 
 
             @elseif($user->isAgencyUser())
-                <a href="#">📥 Assigned Inquiries</a>
+                <a href="{{ route('agency.inquiries.index') }}">📥 Assigned Inquiries</a>
                 <a href="#">📝 Submit Response</a>
+
             @elseif($user->isPublicUser())
                 <a href="{{ route('public.inquiries.create') }}">➕ Submit Inquiry</a>
                 <a href="{{ route('public.inquiries.index') }}">📂 My Inquiries</a>

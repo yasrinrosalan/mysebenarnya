@@ -103,6 +103,34 @@
         <a href="{{ route('admin.reports.excel', request()->query()) }}" class="btn btn-outline-success btn-sm">📥 Export Excel</a>
         <a href="{{ route('admin.reports.pdf', request()->query()) }}" class="btn btn-outline-danger btn-sm">📄 Export PDF</a>
     </div>
+    {{-- Charts: Inquiries by Category and Status --}}
+    <div class="row g-4 mt-4">
+        {{-- Pie Chart: Inquiries by Category --}}
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-secondary text-white fw-semibold">
+                    Inquiries by Category
+                </div>
+                <div class="card-body">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        {{-- Pie Chart: Inquiries by Status --}}
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-warning text-dark fw-semibold">
+                    Inquiries by Status
+                </div>
+                <div class="card-body">
+                    <canvas id="inquiryStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
 
 
     {{-- Footer --}}
@@ -164,5 +192,58 @@
             }
         }
     });
+
+
+    // Pie Chart: Inquiries by Category
+    const categoryData = @json($inquiryByCategoryChart);
+    const categoryLabels = Object.keys(categoryData);
+    const categoryCounts = Object.values(categoryData);
+
+    const ctx3 = document.getElementById('categoryChart').getContext('2d');
+    new Chart(ctx3, {
+        type: 'pie',
+        data: {
+            labels: categoryLabels,
+            datasets: [{
+                data: categoryCounts,
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
+            }]
+        },
+        options: {
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Inquiries by Category'
+                }
+            }
+        }
+    });
+
+    // Pie Chart: Inquiries by Status
+    const statusData = @json($inquiryStatusChart);
+    const statusLabels = Object.keys(statusData);
+    const statusCounts = Object.values(statusData);
+
+    const ctx4 = document.getElementById('inquiryStatusChart').getContext('2d');
+    new Chart(ctx4, {
+        type: 'pie',
+        data: {
+            labels: statusLabels,
+            datasets: [{
+                data: statusCounts,
+                backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545'],
+            }]
+        },
+        options: {
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Inquiries by Status'
+                }
+            }
+        }
+    });
+
 </script>
+
 @endpush
