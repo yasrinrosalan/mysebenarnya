@@ -41,17 +41,20 @@
             <td>{{ $inquiry->category->name }}</td>
         </tr>
         @if ($inquiry->attachments->count())
-        <tr>
-            <th>Attachment</th>
-            <td>
-                <ul class="mb-0 ps-3">
-                    @foreach ($inquiry->attachments as $file)
-                        <li><a href="{{ asset('storage/' . $file->url_path) }}" target="_blank">{{ $file->file_type }}</a></li>
-                    @endforeach
-                </ul>
-            </td>
-        </tr>
-        @endif
+    <strong>Attachments:</strong>
+    <ul>
+        @foreach ($inquiry->attachments as $file)
+            <li>
+                <a href="{{ asset('storage/' . $file->url_path) }}" target="_blank">
+                    {{ $file->file_type }}
+                </a>
+            </li>
+        @endforeach
+    </ul>
+@else
+    <p>No attachments available.</p>
+@endif
+
     </tbody>
 </table>
 
