@@ -134,6 +134,13 @@ class InquiryController extends Controller
     ]);
 }
 
+public function create()
+{
+    $categories = Category::all();
+    return view('public.inquiries.create', compact('categories'));
+}
+
+
     
 
 
