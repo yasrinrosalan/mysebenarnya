@@ -73,30 +73,40 @@ class InquiryController extends Controller
 
 
     public function manage(Request $request)
-    {
-        $query = Inquiry::with(['category', 'attachments', 'publicUser']);
+{
+    // Show Pending, Validated, Rejected (only for pending section)
+    $pendingInquiries = Inquiry::with(['category', 'attachments', 'publicUser'])
+        ->whereIn('status', ['pending', 'validated', 'rejected'])
+        ->orderByDesc('submitted_at')
+        ->get();
 
+    // Show everything else except pending (for history)
+    $historyQuery = Inquiry::with(['category', 'attachments', 'publicUser', 'assignment.agencyUser'])
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
+        ->where('status', '!=', 'pending');
 
-        if ($request->filled('from') && $request->filled('to')) {
-            $query->whereBetween('submitted_at', [$request->from, $request->to]);
-        }
-
-        if ($request->filled('agency_id')) {
-            $query->whereHas('assignment', function ($q) use ($request) {
-                $q->where('agency_user_id', $request->agency_id);
-            });
-        }
-
-        $inquiries = $query->orderByDesc('submitted_at')->get();
-
-        $agencies = User::where('role', 'agency')->get(); // for filter dropdown
-
-        return view('admin.inquiries.manage', compact('inquiries', 'agencies'));
+    if ($request->filled('status')) {
+        $historyQuery->where('status', $request->status);
     }
+
+    if ($request->filled('from') && $request->filled('to')) {
+        $historyQuery->whereBetween('submitted_at', [$request->from, $request->to]);
+    }
+
+    if ($request->filled('agency_id')) {
+        $historyQuery->whereHas('assignment', function ($q) use ($request) {
+            $q->where('agency_user_id', $request->agency_id);
+        });
+    }
+
+    $historyInquiries = $historyQuery->orderByDesc('submitted_at')->get();
+
+    $agencies = User::where('role', 'agency')->get();
+
+    return view('admin.inquiries.manage', compact('pendingInquiries', 'historyInquiries', 'agencies'));
+}
+
+
 
     public function report(Request $request)
 {
@@ -124,77 +134,41 @@ class InquiryController extends Controller
     ]);
 }
 
-    // MCMC ADMIN: Assign Inquiry to Agency
-    public function assignInquiry(Request $request, $id)
-    {
-        $request->validate([
-            'agency_user_id' => 'required|exists:agency_user,user_id',
-            'comment' => 'nullable|string',
-        ]);
+    
 
-        Assignment::create([
-            'inquiry_id' => $id,
-            'agency_user_id' => $request->agency_user_id,
-            'status' => 'assigned',
-            'assigned_at' => now(),
-            'last_updated_at' => now(),
-            'comment' => $request->comment,
-        ]);
 
-        Inquiry::where('inquiry_id', $id)->update(['status' => 'assigned']);
-
-        AuditLog::create([
-            'action' => 'Assigned Inquiry',
-            'details' => 'Assigned to agency ID: ' . $request->agency_user_id,
-            'timestamp' => now(),
-            'inquiry_id' => $id,
-            'user_id' => Auth::id(),
-        ]);
-
-        return redirect()->route('admin.inquiries.index')->with('success', 'Inquiry assigned to agency.');
-    }
-
-    // PUBLIC: Show Create Inquiry Form
-    public function create()
-    {
-        $categories = Category::all();
-        return view('public.inquiries.create', compact('categories'));
-    }
-
-    // PUBLIC: Store New Inquiry
 public function store(Request $request)
 {
     $request->validate([
         'title' => 'required|string|max:255',
-        'description' => 'required',
-        'category_id' => 'required|exists:categories,category_id', // ✅ FIXED TABLE NAME
-        'evidence' => 'nullable|file|mimes:jpg,jpeg,png,pdf,docx|max:2048',
-        'is_public' => 'nullable',
+        'description' => 'required|string',
+        'category_id' => 'required|exists:categories,category_id',
+        'evidence' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
     ]);
 
     $inquiry = Inquiry::create([
         'title' => $request->title,
         'description' => $request->description,
-        'submitted_at' => now(),
-        'status' => 'pending',
-        'is_public' => $request->has('is_public'),
-        'public_user_id' => Auth::id(),
         'category_id' => $request->category_id,
+        'public_user_id' => auth()->id(),
+        'is_public' => $request->has('is_public') ? 1 : 0,
+        'status' => 'pending',
     ]);
 
+    // ✅ Handle file upload
     if ($request->hasFile('evidence')) {
-        $path = $request->file('evidence')->store('evidence');
+        $filePath = $request->file('evidence')->store('evidence', 'public');
 
         Attachment::create([
-            'file_type' => $request->file('evidence')->getClientOriginalExtension(),
-            'url_path' => $path,
-            'uploaded_at' => now(),
             'inquiry_id' => $inquiry->inquiry_id,
+            'file_type' => $request->file('evidence')->getClientOriginalExtension(),
+            'url_path' => $filePath,
         ]);
     }
 
     return redirect()->route('public.inquiries.index')->with('success', 'Inquiry submitted successfully.');
 }
+
 
 
     // PUBLIC: View Own Inquiries
@@ -231,6 +205,40 @@ public function store(Request $request)
 
     return view('public.inquiries.public', compact('inquiries', 'categories'));
 }
+public function agencyIndex(Request $request)
+{
+    $userId = auth()->id();
+
+    $query = Inquiry::whereHas('assignment', function ($q) use ($userId) {
+            $q->where('agency_user_id', $userId);
+        })
+        ->with(['category', 'assignment']);
+
+    // Optional Filters
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
+
+    if ($request->filled('from') && $request->filled('to')) {
+        $query->whereBetween('submitted_at', [$request->from, $request->to]);
+    }
+
+    if ($request->filled('category_id')) {
+        $query->where('category_id', $request->category_id);
+    }
+
+    $inquiries = $query->orderByDesc('submitted_at')->get();
+    $categories = Category::all();
+
+    return view('agency.inquiries.index', compact('inquiries', 'categories'));
+}
+public function agencyShow($id)
+{
+    $inquiry = Inquiry::with(['category', 'attachments', 'assignment', 'auditLogs'])->findOrFail($id);
+
+    return view('agency.inquiries.show', compact('inquiry'));
+}
+
 
 
 }

@@ -110,4 +110,12 @@ Route::middleware(['auth', 'isAdmin'])->prefix('admin')->name('admin.')->group(f
     Route::get('/inquiries/{id}', [InquiryController::class, 'show'])->name('inquiries.show');
     Route::post('/inquiries/{id}/validate', [InquiryController::class, 'validateInquiry'])->name('inquiries.validate');
     Route::post('/inquiries/{id}/assign', [InquiryController::class, 'assignInquiry'])->name('inquiries.assign');
+
+    
 });
+
+Route::middleware(['auth:agency'])->prefix('agency')->name('agency.')->group(function () {
+    Route::get('/inquiries', [\App\Http\Controllers\InquiryController::class, 'agencyIndex'])->name('inquiries.index');
+    Route::get('/inquiries/{id}', [\App\Http\Controllers\InquiryController::class, 'agencyShow'])->name('inquiries.show');
+});
+

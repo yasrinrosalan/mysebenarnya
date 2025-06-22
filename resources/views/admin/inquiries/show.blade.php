@@ -46,7 +46,7 @@
             <td>
                 <ul class="mb-0 ps-3">
                     @foreach ($inquiry->attachments as $file)
-                        <li><a href="{{ asset('storage/' . $file->url_path) }}" target="_blank">{{ $file->file_type }}</a></li>
+                        <li><a href="{{ asset('storage/' . $file->url_path) }}" target="_blank">View Attachment</a></li>
                     @endforeach
                 </ul>
             </td>
@@ -76,21 +76,6 @@
 
     <hr>
 
-    <form method="POST" action="{{ route('admin.inquiries.assign', $inquiry->inquiry_id) }}">
-        @csrf
-        <div class="mb-3">
-            <label>Assign to Agency</label>
-            <select name="agency_user_id" class="form-control" required>
-                @foreach ($agencies as $agency)
-                    <option value="{{ $agency->user_id }}">{{ $agency->agency_name }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="mb-3">
-            <label>Comment</label>
-            <textarea name="comment" class="form-control"></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary">Assign Inquiry</button>
-    </form>
+    
 </div>
 @endsection
