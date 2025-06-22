@@ -245,6 +245,29 @@ public function agencyShow($id)
 
     return view('agency.inquiries.show', compact('inquiry'));
 }
+public function updateAssignmentStatus(Request $request, $assignmentId)
+{
+    $request->validate([
+        'status' => 'required|in:assigned,under_investigation,verified_true,fake,rejected',
+        'comment' => 'nullable|string',
+    ]);
+
+    $assignment = Assignment::findOrFail($assignmentId);
+
+    // Update assignment status
+    $assignment->update([
+        'status' => $request->status,
+        'comment' => $request->comment,
+        'last_updated_at' => now(),
+    ]);
+
+    // Sync status to inquiry table
+    Inquiry::where('inquiry_id', $assignment->inquiry_id)
+        ->update(['status' => $request->status]);
+
+    return back()->with('success', 'Status updated successfully.');
+}
+
 
 
 

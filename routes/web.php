@@ -117,6 +117,8 @@ Route::middleware(['auth', 'isAdmin'])->prefix('admin')->name('admin.')->group(f
 Route::middleware(['auth'])->prefix('agency')->name('agency.')->group(function () {
     Route::get('/inquiries', [InquiryController::class, 'agencyIndex'])->name('inquiries.index');
     Route::get('/inquiries/{id}', [InquiryController::class, 'agencyShow'])->name('inquiries.show');
+    Route::post('/assignments/{id}/update-status', [InquiryController::class, 'updateAssignmentStatus'])->name('assignment.update');
+
 });
 
 
