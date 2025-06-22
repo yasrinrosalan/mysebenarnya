@@ -6,22 +6,29 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Foundation\Auth\ConfirmsPasswords;
+use Illuminate\Foundation\Auth\VerifiesEmails;
 use App\Models\User;
 use App\Models\PublicUser;
 
 class AuthController extends Controller
 {
-    /**
-     * Default redirection path.
-     */
+    use ConfirmsPasswords, VerifiesEmails;
+
     protected $redirectTo = '/home';
 
     public function __construct()
     {
-        $this->middleware('guest')->except('logout');
+        $this->middleware('guest')->except(['logout', 'confirmPasswordForm', 'updatePassword', 'verifyEmail', 'resendVerificationEmail']);
+        $this->middleware('auth')->only(['confirmPasswordForm', 'updatePassword', 'verifyEmail', 'resendVerificationEmail']);
+        $this->middleware('signed')->only('verifyEmail');
+        $this->middleware('throttle:6,1')->only('verifyEmail', 'resendVerificationEmail');
     }
 
     // ========================
@@ -69,10 +76,8 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
         return redirect('/');
     }
 
@@ -102,7 +107,6 @@ class AuthController extends Controller
         $this->validator($request->all())->validate();
 
         event(new Registered($user = $this->create($request->all())));
-
         Auth::login($user);
 
         return redirect($this->redirectTo());
@@ -137,5 +141,128 @@ class AuthController extends Controller
         ]);
 
         return $user;
+    }
+
+    // ========================
+    // 🔁 PASSWORD METHODS
+    // ========================
+
+    public function confirmPasswordForm()
+    {
+        return view('auth.confirm-password');
+    }
+
+    public function showLinkRequestForm()
+    {
+        return view('auth.forgot-password');
+    }
+
+    public function sendResetLinkEmail(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $status = Password::sendResetLink($request->only('email'));
+
+        return $status === Password::RESET_LINK_SENT
+            ? back()->with('success', 'Password reset link has been sent.')
+            : back()->with('error', 'Unable to send reset link. Please try again.');
+    }
+
+    public function showAdminReset()
+    {
+        return view('auth.admin-forgot-password');
+    }
+
+    public function sendAdminResetLink(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user || !$user->isAdminUser()) {
+            return back()->with('error', 'This email does not belong to an admin user.');
+        }
+
+        $status = Password::sendResetLink($request->only('email'));
+
+        return $status === Password::RESET_LINK_SENT
+            ? back()->with('success', 'Admin password reset link sent successfully.')
+            : back()->with('error', 'Failed to send reset link. Please try again.');
+    }
+
+    public function showResetForm($token)
+    {
+        return view('auth.reset-password', ['token' => $token]);
+    }
+
+    public function reset(Request $request)
+    {
+        $request->validate([
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->password = Hash::make($password);
+                $user->setRememberToken(Str::random(60));
+                $user->save();
+            }
+        );
+
+        return $status === Password::PASSWORD_RESET
+            ? redirect()->route('login')->with('status', __($status))
+            : back()->withErrors(['email' => [__($status)]]);
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = Auth::user();
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        if ($user->isAdminUser() && $user->adminUser) {
+            $user->adminUser->force_password_change = false;
+            $user->adminUser->save();
+        }
+
+        if ($user->isAgencyUser() && $user->agencyUser) {
+            $user->agencyUser->force_password_change = false;
+            $user->agencyUser->save();
+        }
+
+        Log::info("User ID {$user->id} changed their password", [
+            'role' => $user->role,
+            'time' => now(),
+        ]);
+
+        return match ($user->role) {
+            'admin' => redirect()->route('admin.dashboard')->with('success', 'Password updated successfully.'),
+            'agency' => redirect()->route('agency.dashboard')->with('success', 'Password updated successfully.'),
+            'public' => redirect()->route('public.dashboard')->with('success', 'Password updated successfully.'),
+            default => redirect('/home')->with('success', 'Password updated successfully.'),
+        };
+    }
+
+    // ========================
+    // 📧 EMAIL VERIFICATION
+    // ========================
+
+    public function verifyEmail(Request $request)
+    {
+        $request->fulfill();
+        return redirect($this->redirectTo);
+    }
+
+    public function resendVerificationEmail(Request $request)
+    {
+        $request->user()->sendEmailVerificationNotification();
+        return back()->with('status', 'Verification link sent!');
     }
 }
