@@ -29,10 +29,13 @@ class Inquiry extends Model
         return $this->belongsTo(Category::class, 'category_id');
     }
 
-    public function assignments()
+    public function assignment()
     {
-        return $this->hasMany(Assignment::class, 'inquiry_id');
+        return $this->hasOne(Assignment::class, 'inquiry_id');
     }
+
+    
+
 
     public function reports()
     {

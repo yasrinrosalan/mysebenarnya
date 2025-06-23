@@ -92,6 +92,7 @@
         <a href="{{ route('admin.reports.excel', request()->query()) }}" class="btn btn-outline-success btn-sm">📥 Export Excel</a>
         <a href="{{ route('admin.reports.pdf', request()->query()) }}" class="btn btn-outline-danger btn-sm">📄 Export PDF</a>
     </div>
+    
 
 
     {{-- Footer --}}

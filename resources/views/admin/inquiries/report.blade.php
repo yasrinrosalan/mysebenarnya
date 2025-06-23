@@ -18,6 +18,18 @@
             </select>
         </div>
         <div class="col-md-3">
+            <label>Category</label>
+            <select name="category_id" class="form-select">
+                <option value="">-- All --</option>
+                @foreach($categories as $cat)
+                    <option value="{{ $cat->category_id }}" {{ request('category_id') == $cat->category_id ? 'selected' : '' }}>
+                        {{ $cat->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="col-md-3">
             <label>From Date</label>
             <input type="date" name="from" class="form-control">
         </div>
@@ -55,23 +67,82 @@
 
     <h5>📈 Monthly Inquiry Summary</h5>
     <canvas id="monthlyChart"></canvas>
+
+    {{-- Export & Download Buttons --}}
+<div class="mt-3 d-flex gap-2">
+    <a href="{{ route('admin.inquiries.export.excel', request()->query()) }}" class="btn btn-success btn-sm">
+        📥 Export Excel
+    </a>
+    <a href="{{ route('admin.inquiries.export.pdf', request()->query()) }}" class="btn btn-danger btn-sm">
+        📄 Export PDF
+    </a>
+    <button class="btn btn-secondary btn-sm" onclick="downloadChart()">🖼️ Download Chart</button>
+</div>
 </div>
 @endsection
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+const groupedStats = @json($monthlyStats);
+const categories = [...new Set(Object.values(groupedStats).flatMap(month => month.map(item => item.category_name)))];
+const months = Object.keys(groupedStats);
+
+const datasets = categories.map(category => {
+    return {
+        label: category,
+        data: months.map(month => {
+            const monthData = groupedStats[month].find(item => item.category_name === category);
+            return monthData ? monthData.total : 0;
+        }),
+        backgroundColor: '#' + Math.floor(Math.random()*16777215).toString(16)
+    };
+});
+
 const ctx = document.getElementById('monthlyChart').getContext('2d');
-const chart = new Chart(ctx, {
+new Chart(ctx, {
     type: 'bar',
     data: {
-        labels: {!! json_encode(array_keys($monthlyStats->toArray())) !!},
-        datasets: [{
-            label: 'Inquiries per Month',
-            data: {!! json_encode(array_values($monthlyStats->toArray())) !!},
-            backgroundColor: 'rgba(54, 162, 235, 0.6)'
-        }]
+        labels: months,
+        datasets: datasets
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Monthly Inquiry Count by Category'
+            },
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+            },
+        },
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        scales: {
+            x: {
+                stacked: true
+            },
+            y: {
+                stacked: true
+            }
+        }
     }
 });
 </script>
+<script>
+function downloadChart() {
+    const chartCanvas = document.getElementById('monthlyChart');
+    const link = document.createElement('a');
+    link.download = 'inquiry_report_chart.png';
+    link.href = chartCanvas.toDataURL('image/png');
+    link.click();
+}
+</script>
+
+
 @endpush
+

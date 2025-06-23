@@ -110,4 +110,21 @@ Route::middleware(['auth', 'isAdmin'])->prefix('admin')->name('admin.')->group(f
     Route::get('/inquiries/{id}', [InquiryController::class, 'show'])->name('inquiries.show');
     Route::post('/inquiries/{id}/validate', [InquiryController::class, 'validateInquiry'])->name('inquiries.validate');
     Route::post('/inquiries/{id}/assign', [InquiryController::class, 'assignInquiry'])->name('inquiries.assign');
+    Route::get('/inquiries/{id}/audit-log', [InquiryController::class, 'viewAuditLog'])->name('audit-logs.show');
+
+    // Export inquiries
+    Route::get('/inquiries/export/excel', [InquiryController::class, 'exportExcel'])->name('inquiries.export.excel');
+    Route::get('/inquiries/export/pdf', [InquiryController::class, 'exportPDF'])->name('inquiries.export.pdf');
+
+
+    
 });
+
+Route::middleware(['auth'])->prefix('agency')->name('agency.')->group(function () {
+    Route::get('/inquiries', [InquiryController::class, 'agencyIndex'])->name('inquiries.index');
+    Route::get('/inquiries/{id}', [InquiryController::class, 'agencyShow'])->name('inquiries.show');
+    Route::post('/assignments/{id}/update-status', [InquiryController::class, 'updateAssignmentStatus'])->name('assignment.update');
+
+});
+
+
