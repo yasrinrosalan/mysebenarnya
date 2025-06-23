@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Exports\InquiryExport;
 
 class InquiryController extends Controller
 {
@@ -29,12 +32,19 @@ class InquiryController extends Controller
 
     // MCMC ADMIN: View Inquiry Details
     public function show($id)
-    {
-        $inquiry = Inquiry::with(['category', 'attachments'])->findOrFail($id);
-        $agencies = AgencyUser::all(); // for assignment dropdown
+{
+    $inquiry = Inquiry::with([
+        'category',
+        'attachments',
+        'auditLogs',      // ✅ include this
+        'assignment.agencyUser'
+    ])->findOrFail($id);
 
-        return view('admin.inquiries.show', compact('inquiry', 'agencies'));
-    }
+    $agencies = AgencyUser::all();
+
+    return view('admin.inquiries.show', compact('inquiry', 'agencies'));
+}
+
 
     // MCMC ADMIN: Validate or Reject Inquiry
     public function validateInquiry(Request $request, $id)
@@ -51,13 +61,16 @@ class InquiryController extends Controller
             'review_notes' => $request->review_notes,
         ]);
 
-        AuditLog::create([
-            'action' => 'Validate Inquiry',
-            'details' => $request->review_notes,
-            'timestamp' => now(),
-            'inquiry_id' => $inquiry->inquiry_id,
-            'user_id' => Auth::id(),
-        ]);
+        $actionMessage = $request->status === 'validated' ? 'Inquiry Validated' : 'Inquiry Discarded';
+
+AuditLog::create([
+    'action' => $actionMessage,
+    'details' => $request->review_notes,
+    'timestamp' => now(),
+    'inquiry_id' => $inquiry->inquiry_id,
+    'user_id' => Auth::id(),
+]);
+
 
         $statusText = $request->status === 'validated' ? 'Inquiry validated.' : 'Inquiry discard.';
 
@@ -110,7 +123,8 @@ class InquiryController extends Controller
 
     public function report(Request $request)
 {
-    $query = Inquiry::with('category');
+    $query = Inquiry::with('category')
+        ->whereNotNull('public_user_id');
 
     if ($request->filled('status')) {
         $query->where('status', $request->status);
@@ -120,19 +134,34 @@ class InquiryController extends Controller
         $query->whereBetween('submitted_at', [$request->from, $request->to]);
     }
 
+    if ($request->filled('category_id')) {
+        $query->where('category_id', $request->category_id);
+    }
+
     $inquiries = $query->get();
 
-    // Grouped data for chart (monthly)
-    $monthlyStats = Inquiry::selectRaw('MONTH(submitted_at) as month, COUNT(*) as total')
-        ->groupBy(DB::raw('MONTH(submitted_at)'))
-        ->orderBy(DB::raw('MONTH(submitted_at)'))
-        ->pluck('total', 'month');
+    // Monthly stats (filtered as well)
+    $monthlyStats = Inquiry::whereNotNull('public_user_id')
+        ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))
+        ->when($request->filled('category_id'), fn($q) => $q->where('category_id', $request->category_id))
+        ->when($request->filled('from') && $request->filled('to'), fn($q) => $q->whereBetween('submitted_at', [$request->from, $request->to]))
+        ->join('categories', 'inquiries.category_id', '=', 'categories.category_id')
+        ->selectRaw('categories.name as category_name, DATE_FORMAT(submitted_at, "%Y-%m") as month, COUNT(*) as total')
+        ->groupBy('month', 'categories.name')
+        ->orderBy('month')
+        ->get()
+        ->groupBy('month');
+
+
+    $categories = Category::all();
 
     return view('admin.inquiries.report', [
         'inquiries' => $inquiries,
         'monthlyStats' => $monthlyStats,
+        'categories' => $categories,
     ]);
 }
+
 
 public function create()
 {
@@ -266,6 +295,38 @@ public function updateAssignmentStatus(Request $request, $assignmentId)
         ->update(['status' => $request->status]);
 
     return back()->with('success', 'Status updated successfully.');
+}
+public function viewAuditLog($id)
+{
+    $inquiry = Inquiry::with('auditLogs')->findOrFail($id);
+
+    return view('admin.inquiries.audit', compact('inquiry'));
+}
+public function exportExcel(Request $request)
+{
+    return Excel::download(new InquiryExport($request), 'inquiry_report.xlsx');
+}
+
+public function exportPDF(Request $request)
+{
+    $query = Inquiry::with('category');
+
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
+
+    if ($request->filled('from') && $request->filled('to')) {
+        $query->whereBetween('submitted_at', [$request->from, $request->to]);
+    }
+
+    if ($request->filled('category_id')) {
+        $query->where('category_id', $request->category_id);
+    }
+
+    $inquiries = $query->get();
+
+    $pdf = PDF::loadView('admin.inquiries.report_pdf', compact('inquiries'));
+    return $pdf->download('inquiry_report.pdf');
 }
 
 

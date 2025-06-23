@@ -81,6 +81,8 @@
                 <th>Submitted At</th>
                 <th>Category</th>
                 <th>Assigned Agency</th>
+                <th>Attachments</th>
+                <th>Audit log</th>
             </tr>
         </thead>
         <tbody>
@@ -92,6 +94,20 @@
                     <td>{{ $inquiry->submitted_at }}</td>
                     <td>{{ $inquiry->category->name ?? '-' }}</td>
                     <td>{{ $inquiry->assignment->agencyUser->agency_name ?? '-' }}</td>
+                   
+                    <td>
+                        <ul class="mb-0 ps-3">
+                            @foreach ($inquiry->attachments as $file)
+                                <li><a href="{{ asset('storage/' . $file->url_path) }}" target="_blank">View</a></li>
+                            @endforeach
+                        </ul>
+                    
+    
+                   
+                    </td>
+                    <td>
+                        <a href="{{ route('admin.audit-logs.show', $inquiry->inquiry_id) }}" class="btn btn-sm btn-secondary mt-1">Audit Log</a>
+                    </td>
                 </tr>
             @empty
                 <tr><td colspan="6" class="text-center">No history inquiries found.</td></tr>

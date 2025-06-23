@@ -13,27 +13,32 @@
         <tr><th>Status</th><td>{{ ucfirst($inquiry->status) }}</td></tr>
         <tr><th>Submitted At</th><td>{{ $inquiry->submitted_at }}</td></tr>
 
-        @if($inquiry->assignment)
-<form method="POST" action="{{ route('agency.assignment.update', $inquiry->assignment->assignment_id) }}">
-    @csrf
-    <div class="mb-3">
-        <label for="status" class="form-label">Update Inquiry Status</label>
-        <select name="status" class="form-select" required>
-            <option value="">-- Select Status --</option>
-            <option value="assigned">Assigned</option>
-            <option value="under_investigation">Under Investigation</option>
-            <option value="verified_true">Verified as True</option>
-            <option value="fake">Identified as Fake</option>
-            <option value="rejected">Rejected</option>
-        </select>
-    </div>
-    <div class="mb-3">
-        <label for="comment" class="form-label">Comment</label>
-        <textarea name="comment" class="form-control" rows="3"></textarea>
-    </div>
-    <button type="submit" class="btn btn-primary">Update Status</button>
-</form>
+        @if ($inquiry->auditLogs->count())
+    <h5 class="mt-4">📝 Inquiry History</h5>
+    <table class="table table-bordered">
+        <thead class="table-secondary">
+            <tr>
+                <th>Timestamp</th>
+                <th>Action</th>
+                <th>Details</th>
+                <th>By User ID</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($inquiry->auditLogs as $log)
+                <tr>
+                    <td>{{ $log->timestamp }}</td>
+                    <td>{{ $log->action }}</td>
+                    <td>{{ $log->details ?? '-' }}</td>
+                    <td>{{ $log->user_id }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+@else
+    <p>No audit logs available.</p>
 @endif
+
 
 
         @if ($inquiry->attachments->count())
@@ -49,18 +54,7 @@
         </tr>
         @endif
 
-        @if ($inquiry->auditLogs->count())
-        <tr>
-            <th>Audit Logs</th>
-            <td>
-                <ul>
-                    @foreach ($inquiry->auditLogs as $log)
-                        <li>{{ $log->action }} by user {{ $log->user_id }} at {{ $log->timestamp }}</li>
-                    @endforeach
-                </ul>
-            </td>
-        </tr>
-        @endif
+    
     </table>
 </div>
 @endsection
