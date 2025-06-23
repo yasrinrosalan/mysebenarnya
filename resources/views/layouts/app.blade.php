@@ -137,7 +137,8 @@
                 <a href="{{ route('admin.inquiries.manage') }}">📥 Manage Inquiries</a>
                 <a href="{{ route('admin.register.agency.form') }}">🏢 Register Agency</a>
                 <a href="{{ route('admin.inquiries.report') }}">📊 Inquiry Reports</a>
-                
+                <a href="{{ route('admin.audit-logs.index') }}">📂 View Activity Logs</a>
+
 
             @elseif($user->isAgencyUser())
                 <a href="#">📥 Assigned Inquiries</a>
@@ -170,36 +171,38 @@
 
         <div class="collapse navbar-collapse justify-content-end" id="navbarMain">
             @auth
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
-                            data-bs-toggle="dropdown" aria-expanded="false">
-                            {{ Auth::user()->name }}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                            <li><a class="dropdown-item" href="{{ route('profile.edit') }}">👤 Edit Profile</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form action="{{ route('logout') }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button class="dropdown-item" type="submit">🚪 Logout</button>
-                                </form>
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
-            @else
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('login') }}">Login</a>
-                    </li>
-                    @if (Route::has('register'))
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('register') }}">Register</a>
+            @php
+                $profilePicture = Auth::user()->profile_picture_url
+                                    ? asset('storage/' . Auth::user()->profile_picture_url)
+                                    : asset('uploads/profile_pictures/default.png');
+            @endphp
+            <ul class="navbar-nav">
+                <li class="nav-item dropdown d-flex align-items-center">
+                    <img src="{{ $profilePicture }}"
+                        alt="Profile Picture"
+                        class="rounded-circle me-2"
+                        width="35" height="35"
+                        style="object-fit: cover;">
+
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                        {{ Auth::user()->name }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                        <li><a class="dropdown-item" href="{{ route('profile.edit') }}">👤 Edit Profile</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                                @csrf
+                                <button class="dropdown-item" type="submit">🚪 Logout</button>
+                            </form>
                         </li>
-                    @endif
-                </ul>
-            @endauth
+                    </ul>
+                </li>
+            </ul>
+        @endauth
+
+
         </div>
     </div>
 </nav>

@@ -73,31 +73,20 @@
     </div>
 
     {{-- Charts Section --}}
-    <div class="row g-4">
+    <div class="row g-4 justify-content-center">
         {{-- Bar Chart: Users by Role --}}
-        <div class="col-md-6">
+        <div class="col-md-8 col-lg-6">
             <div class="card shadow-sm border-0">
-                <div class="card-header bg-primary text-white fw-semibold">
+                <div class="card-header bg-primary text-white fw-semibold text-center">
                     Total Registered Users by Role
                 </div>
-                <div class="card-body">
+                <div class="card-body text-center">
                     <canvas id="usersByRoleChart"></canvas>
                 </div>
             </div>
         </div>
-
-        {{-- Line Chart: Monthly Registrations --}}
-        <div class="col-md-6">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-info text-white fw-semibold">
-                    Monthly New User Registrations (Last 6 Months)
-                </div>
-                <div class="card-body">
-                    <canvas id="monthlyRegistrationsChart"></canvas>
-                </div>
-            </div>
-        </div>
     </div>
+
 
     <div class="text-center mt-3">
         <a href="{{ route('admin.reports.excel', request()->query()) }}" class="btn btn-outline-success btn-sm">📥 Export Excel</a>
@@ -107,7 +96,7 @@
 
     {{-- Footer --}}
     <div class="text-center mt-4">
-        <a href="{{ route('profile.show') }}" class="btn btn-link">👤 View My Profile</a>
+        <button class="btn btn-outline-primary"><a href="{{ route('profile.show') }}" class="">👤 View My Profile</a></button>
     </div>
 </div>
 @endsection

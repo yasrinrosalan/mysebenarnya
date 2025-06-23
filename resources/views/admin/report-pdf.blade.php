@@ -7,10 +7,19 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
         th { background-color: #f2f2f2; }
+        .chart {
+            text-align: center;
+            margin: 20px 0;
+        }
     </style>
 </head>
 <body>
     <h3>User Report</h3>
+
+    <div class="chart">
+        <img src="{{ $usersByRoleChart }}" width="500" alt="Users By Role Chart">
+    </div>
+
     <table>
         <thead>
             <tr>
@@ -24,7 +33,7 @@
                     <td>{{ $user->name }}</td>
                     <td>{{ $user->email }}</td>
                     <td>{{ $user->role }}</td>
-                    <td>{{ $user->created_at }}</td>
+                    <td>{{ optional($user->created_at)->format('Y-m-d') }}</td>
                 </tr>
             @endforeach
         </tbody>

@@ -4,7 +4,7 @@
 @section('title', 'Audit Logs')
 
 @section('content')
-    <h1>📜 Audit Logs</h1>
+    <h1>📜 Activity Logs</h1>
 
     <table class="table table-striped table-bordered mt-4">
         <thead class="table-dark">

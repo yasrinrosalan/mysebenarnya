@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\AuditLog;
+use Illuminate\Support\Str;
 
 class ProfileController extends Controller
 {
@@ -19,11 +20,12 @@ class ProfileController extends Controller
     /**
      * Handle the profile update request.
      */
+
+
     public function update(Request $request)
     {
-        // ✅ DO THIS ONCE
         /** @var \App\Models\User $user */
-        $user = Auth::user(); // do NOT re-call this later!
+        $user = Auth::user();
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -47,8 +49,15 @@ class ProfileController extends Controller
         }
 
         if ($request->hasFile('profile_picture')) {
-            $filename = 'profile_' . $user->id . '.' . $request->file('profile_picture')->getClientOriginalExtension();
-            $path = $request->file('profile_picture')->storeAs('profile_pictures', $filename, 'public');
+            // Delete old picture if it exists
+            if ($user->profile_picture_url && \Storage::disk('public')->exists($user->profile_picture_url)) {
+                \Storage::disk('public')->delete($user->profile_picture_url);
+            }
+
+            // Generate unique filename
+            $uniqueFilename = Str::uuid() . '.' . $request->file('profile_picture')->getClientOriginalExtension();
+            $path = $request->file('profile_picture')->storeAs('profile_pictures', $uniqueFilename, 'public');
+
             $changes['profile_picture_url'] = ['old' => $user->profile_picture_url, 'new' => $path];
             $user->profile_picture_url = $path;
         }
@@ -75,19 +84,14 @@ class ProfileController extends Controller
             $user->agencyUser->save();
         }
 
-        // ✅ Save main user profile changes
         $user->save();
 
-        // ✅ Save to audit log ONLY if user is not null
-        if (!empty($changes) && $user && $user->id) {
-            AuditLog::create([
-                'action'     => 'profile_update',
-                'timestamp'  => now(),
-                'details'    => json_encode($changes),
-                'inquiry_id' => null,
-                'user_id'    => $user->id, // ✅ Confirmed valid
-            ]);
-        }
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => "Updated Profile",
+            'details' => "User updated their profile information",
+            'timestamp' => now(),
+        ]);
 
         return redirect()->route('profile.edit')->with('success', 'Profile updated successfully.');
     }
