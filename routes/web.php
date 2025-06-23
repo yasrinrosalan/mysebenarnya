@@ -48,6 +48,9 @@ Route::post('/reset-password', [AuthController::class, 'reset'])->name('password
 Route::get('/admin/forgot-password', [AuthController::class, 'showAdminReset'])->name('admin.password.request');
 Route::post('/admin/forgot-password', [AuthController::class, 'sendAdminResetLink'])->name('admin.password.email');
 
+Route::get('/profile/change-password/request', [UserController::class, 'requestPasswordVerification'])->name('password.change.request');
+Route::post('/profile/change-password/verify', [UserController::class, 'verifyPasswordCode'])->name('password.change.verify');
+
 // ✅ Force Password Change
 Route::middleware(['auth'])->group(function () {
     Route::get('/force-password-change', [UserController::class, 'showForcePasswordForm'])->name('password.force.change.form');
@@ -115,16 +118,10 @@ Route::middleware(['auth', 'isAdmin'])->prefix('admin')->name('admin.')->group(f
     // Export inquiries
     Route::get('/inquiries/export/excel', [InquiryController::class, 'exportExcel'])->name('inquiries.export.excel');
     Route::get('/inquiries/export/pdf', [InquiryController::class, 'exportPDF'])->name('inquiries.export.pdf');
-
-
-    
 });
 
 Route::middleware(['auth'])->prefix('agency')->name('agency.')->group(function () {
     Route::get('/inquiries', [InquiryController::class, 'agencyIndex'])->name('inquiries.index');
     Route::get('/inquiries/{id}', [InquiryController::class, 'agencyShow'])->name('inquiries.show');
     Route::post('/assignments/{id}/update-status', [InquiryController::class, 'updateAssignmentStatus'])->name('assignment.update');
-
 });
-
-

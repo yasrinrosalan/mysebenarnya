@@ -79,9 +79,12 @@
 
                         {{-- Submit & Change Password --}}
 <div class="d-flex justify-content-between mt-4">
-    <a href="{{ route('password.force.change.form') }}" class="btn btn-outline-secondary">
-        Change Password
-    </a>
+    {{-- Change Password Button (Triggers Modal) --}}
+<button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#verifyPasswordModal">
+    Change Password (with Email Verification)
+</button>
+
+
 
     <button type="submit" class="btn btn-primary">
         Save Changes
@@ -90,9 +93,51 @@
 
 
                     </form>
+                    <!-- Modal -->
+<div class="modal fade" id="verifyPasswordModal" tabindex="-1" aria-labelledby="verifyPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ route('password.change.verify') }}">
+            @csrf
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="verifyPasswordModalLabel">Verify Email to Change Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if(session('message'))
+                        <div class="alert alert-info">{{ session('message') }}</div>
+                    @endif
+
+                    <div class="mb-3">
+                        <label class="form-label">Verification Code</label>
+                        <input type="text" name="code" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">New Password</label>
+                        <input type="password" name="new_password" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Confirm New Password</label>
+                        <input type="password" name="new_password_confirmation" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="{{ route('password.change.request') }}" class="btn btn-outline-info">Resend Code</a>
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 @endsection

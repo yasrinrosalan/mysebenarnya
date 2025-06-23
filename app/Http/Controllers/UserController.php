@@ -16,6 +16,8 @@ use App\Exports\UsersReportExport;
 use PDF;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Session;
+
 
 
 class UserController extends Controller
@@ -103,6 +105,57 @@ class UserController extends Controller
 
         return redirect()->route('profile.show')->with('success', 'Password changed successfully.');
     }
+
+    // Step 1: Send Code to Log
+    public function requestPasswordVerification()
+    {
+        $code = rand(100000, 999999);
+        $user = Auth::user();
+
+        session([
+            'password_change_code' => $code,
+            'password_change_email' => $user->email,
+        ]);
+
+        Log::info("🔐 Password Change Code for {$user->email}: $code");
+
+        // ✅ FIXED: Redirect back to edit profile page (not to a missing view)
+        return redirect()->route('profile.edit')->with('message', 'Verification code has been logged (check laravel.log).');
+    }
+
+
+    // Step 2: Verify Code and Update Password
+    public function verifyPasswordCode(Request $request)
+    {
+        $request->validate([
+            'code' => 'required',
+            'new_password' => 'required|confirmed|min:8',
+        ]);
+
+        $sessionCode = Session::get('password_change_code');
+        $sessionEmail = Session::get('password_change_email');
+
+        if ($request->code != $sessionCode || Auth::user()->email != $sessionEmail) {
+            return back()->withErrors(['code' => 'Invalid verification code or session expired.']);
+        }
+
+        $user = Auth::user();
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        Session::forget('password_change_code');
+        Session::forget('password_change_email');
+
+        AuditLog::create([
+            'user_id' => $user->user_id,
+            'action' => 'Verified Email Password Change',
+            'details' => "User changed password after verifying email code",
+            'timestamp' => now(),
+        ]);
+
+        return redirect()->route('profile.show')->with('success', 'Password changed successfully.');
+    }
+
 
     public function showForcePasswordForm()
     {

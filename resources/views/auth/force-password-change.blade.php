@@ -8,7 +8,7 @@
         <div class="col-md-6">
             <div class="card shadow-sm">
                 <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">🔐 First-Time Password Change Required</h5>
+                    <h5 class="mb-0"> Password Change</h5>
                 </div>
                 <div class="card-body">
 
