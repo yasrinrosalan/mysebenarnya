@@ -94,6 +94,14 @@ class AdminController extends Controller
     public function edit($id)
     {
         $user = User::findOrFail($id);
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'User Updated',
+            'details' => "Admin updated user ID {$user->user_id} ({$user->name})",
+            'timestamp' => now(),
+        ]);
+
         return view('admin.users.edit', compact('user'));
     }
 
@@ -109,6 +117,13 @@ class AdminController extends Controller
 
         $user->update($request->all());
 
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'User Updated',
+            'details' => "Admin updated user ID {$user->user_id} ({$user->name})",
+            'timestamp' => now(),
+        ]);
+
         return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
     }
 
@@ -116,6 +131,13 @@ class AdminController extends Controller
     {
         $user = User::findOrFail($id);
         $user->delete();
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'User Deleted',
+            'details' => "Admin deleted user ID {$user->user_id} ({$user->name})",
+            'timestamp' => now(),
+        ]);
 
         return redirect()->route('admin.users.index')->with('success', 'User deleted successfully.');
     }
@@ -126,6 +148,13 @@ class AdminController extends Controller
         $user->password = Hash::make('defaultpassword123');
         $user->force_password_change = true;
         $user->save();
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'Password Reset',
+            'details' => "Admin reset password for user ID {$user->user_id} ({$user->name})",
+            'timestamp' => now(),
+        ]);
 
         return back()->with('success', 'Password reset successfully.');
     }
@@ -139,6 +168,13 @@ class AdminController extends Controller
             'role'       => $request->input('role'),
             'agency_id'  => $request->input('agency_id'),
         ];
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'Export Excel',
+            'details' => 'Admin exported users report to Excel',
+            'timestamp' => now(),
+        ]);
 
         return Excel::download(new UsersReportExport($filters), 'user-report.xlsx');
     }
@@ -164,6 +200,13 @@ class AdminController extends Controller
         }
 
         $users = $query->get();
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'Export PDF',
+            'details' => 'Admin exported users report to PDF',
+            'timestamp' => now(),
+        ]);
 
         $pdf = PDF::loadView('admin.report-pdf', compact('users'));
         return $pdf->download('user-report.pdf');

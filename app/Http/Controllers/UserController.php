@@ -8,12 +8,15 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
+use Illuminate\Support\Facades\Http;
 use App\Models\AgencyUser;
 use App\Models\AuditLog;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\UsersReportExport;
 use PDF;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
+
 
 class UserController extends Controller
 {
@@ -33,13 +36,42 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'contact_info' => 'nullable|string|max:255',
+            'profile_picture' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         $user = Auth::user();
-        $user->update($request->only('name', 'contact_info'));
+
+        if ($request->hasFile('profile_picture')) {
+            $file = $request->file('profile_picture');
+
+            // Generate a unique filename using UUID
+            $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+
+            // Store in /storage/app/public/uploads/profile_pictures/
+            $path = $file->storeAs('uploads/profile_pictures', $filename, 'public');
+
+            // Optional: delete old profile picture if exists
+            if ($user->profile_picture_url && \Storage::disk('public')->exists($user->profile_picture_url)) {
+                \Storage::disk('public')->delete($user->profile_picture_url);
+            }
+
+            $user->profile_picture_url = $path;
+        }
+
+        $user->name = $request->name;
+        $user->contact_info = $request->contact_info;
+        $user->save();
+
+        AuditLog::create([
+            'user_id' => $user->user_id,
+            'action' => 'Profile Updated',
+            'details' => "User updated their profile information",
+            'timestamp' => now(),
+        ]);
 
         return redirect()->route('profile.show')->with('success', 'Profile updated successfully.');
     }
+
 
     public function changePasswordForm()
     {
@@ -61,6 +93,13 @@ class UserController extends Controller
         $user->password = Hash::make($request->new_password);
         $user->force_password_change = false;
         $user->save();
+
+        AuditLog::create([
+            'user_id' => $user->user_id,
+            'action' => 'Password Changed',
+            'details' => "User changed their password",
+            'timestamp' => now(),
+        ]);
 
         return redirect()->route('profile.show')->with('success', 'Password changed successfully.');
     }
@@ -89,6 +128,13 @@ class UserController extends Controller
 
         $user = Auth::user();
         $user->save();
+
+        AuditLog::create([
+            'user_id' => $user->user_id,
+            'action' => 'Forced Password Change',
+            'details' => "User completed forced password change",
+            'timestamp' => now(),
+        ]);
 
         return redirect()->route('home')->with('success', 'Password updated successfully.');
     }
@@ -164,6 +210,7 @@ class UserController extends Controller
         return view('admin.users.index', compact('users'));
     }
 
+
     public function show($id)
     {
         $user = User::findOrFail($id);
@@ -188,6 +235,13 @@ class UserController extends Controller
 
         $user->update($request->all());
 
+        AuditLog::create([
+            'user_id' => $user->user_id,
+            'action' => 'Profile Updated',
+            'details' => "User updated their profile information",
+            'timestamp' => now(),
+        ]);
+
         return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
     }
 
@@ -195,6 +249,13 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
         $user->delete();
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'Admin Deleted User',
+            'details' => "Admin deleted user ID {$user->user_id} ({$user->name})",
+            'timestamp' => now(),
+        ]);
 
         return redirect()->route('admin.users.index')->with('success', 'User deleted successfully.');
     }
@@ -205,6 +266,13 @@ class UserController extends Controller
         $user->password = Hash::make('defaultpassword123');
         $user->force_password_change = true;
         $user->save();
+
+        AuditLog::create([
+            'user_id' => $user->user_id,
+            'action' => 'Password Changed',
+            'details' => "User changed their password",
+            'timestamp' => now(),
+        ]);
 
         return back()->with('success', 'Password reset successfully.');
     }
@@ -219,8 +287,16 @@ class UserController extends Controller
             'agency_id'  => $request->input('agency_id'),
         ];
 
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'Export Excel',
+            'details' => 'User exported user report to Excel',
+            'timestamp' => now(),
+        ]);
+
         return Excel::download(new UsersReportExport($filters), 'user-report.xlsx');
     }
+
 
     public function exportPDF(Request $request)
     {
@@ -244,9 +320,68 @@ class UserController extends Controller
 
         $users = $query->get();
 
-        $pdf = PDF::loadView('admin.report-pdf', compact('users'));
+        // === 📊 Chart Data Generation ===
+        $usersByRole = $query->select('role', DB::raw('count(*) as total'))
+            ->groupBy('role')
+            ->pluck('total', 'role')
+            ->toArray();
+
+        $monthlyRegistrations = (clone $query)->select(
+            DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
+            DB::raw("COUNT(*) as count")
+        )
+            ->where('created_at', '>=', now()->subMonths(6))
+            ->groupBy('month')
+            ->orderBy('month')
+            ->pluck('count', 'month')
+            ->toArray();
+
+        // === 📈 Generate Base64 Images with QuickChart.io ===
+        $usersByRoleChart = 'data:image/png;base64,' . base64_encode(
+            file_get_contents('https://quickchart.io/chart?c=' . urlencode(json_encode([
+                'type' => 'bar',
+                'data' => [
+                    'labels' => array_keys($usersByRole),
+                    'datasets' => [[
+                        'label' => 'Users by Role',
+                        'data' => array_values($usersByRole),
+                        'backgroundColor' => ['#4e73df', '#1cc88a', '#f6c23e'],
+                    ]]
+                ],
+                'options' => ['plugins' => ['legend' => ['display' => false]]]
+            ])))
+        );
+
+        $monthlyRegistrationsChart = 'data:image/png;base64,' . base64_encode(
+            file_get_contents('https://quickchart.io/chart?c=' . urlencode(json_encode([
+                'type' => 'line',
+                'data' => [
+                    'labels' => array_keys($monthlyRegistrations),
+                    'datasets' => [[
+                        'label' => 'Monthly Registrations',
+                        'data' => array_values($monthlyRegistrations),
+                        'fill' => true,
+                        'borderColor' => '#36b9cc',
+                        'backgroundColor' => 'rgba(54, 185, 204, 0.2)',
+                        'tension' => 0.4,
+                    ]]
+                ]
+            ])))
+        );
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'Export PDF',
+            'details' => 'User exported user report to PDF with charts',
+            'timestamp' => now(),
+        ]);
+
+        $pdf = PDF::loadView('admin.report-pdf', compact('users', 'usersByRoleChart', 'monthlyRegistrationsChart'));
         return $pdf->download('user-report.pdf');
     }
+
+
+
 
     /** ========== AGENCY REGISTRATION ========== */
     public function createAgency()
@@ -284,10 +419,11 @@ class UserController extends Controller
             'admin_id' => Auth::id(),
         ]);
 
-        Log::info('New agency registered', [
-            'email' => $user->email,
-            'username' => $user->username,
-            'password' => $generatedPassword,
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'Register Agency',
+            'details' => "Admin registered new agency: {$request->agency_name}",
+            'timestamp' => now(),
         ]);
 
         return back()->with('success', 'Agency registered successfully.')->with([

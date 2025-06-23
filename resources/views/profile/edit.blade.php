@@ -35,13 +35,23 @@
                         {{-- Profile Picture --}}
                         <div class="mb-3">
                             <label class="form-label">Profile Picture</label>
-                            @if(Auth::user()->profile_picture_url)
-                                <div class="mb-2">
-                                    <img src="{{ asset('storage/' . Auth::user()->profile_picture_url) }}" class="rounded-circle" width="80" height="80">
-                                </div>
-                            @endif
+
+                            @php
+                                $profilePicture = Auth::user()->profile_picture_url
+                                    ? asset('storage/' . Auth::user()->profile_picture_url)
+                                    : asset('uploads/profile_pictures/default.png');
+                            @endphp
+
+                            <div class="mb-2 text-center">
+                                <img src="{{ $profilePicture }}"
+                                    class="rounded-circle shadow"
+                                    width="100" height="100"
+                                    style="object-fit: cover; border: 2px solid #dee2e6;">
+                            </div>
+
                             <input type="file" name="profile_picture" class="form-control">
                         </div>
+
 
                         {{-- Admin Only --}}
                         @if(Auth::user()->isAdminUser())
