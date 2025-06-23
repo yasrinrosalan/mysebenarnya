@@ -143,7 +143,7 @@ AuditLog::create([
     // Monthly stats (filtered as well)
     $monthlyStats = Inquiry::whereNotNull('public_user_id')
         ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))
-        ->when($request->filled('category_id'), fn($q) => $q->where('category_id', $request->category_id))
+        ->when($request->filled('category_id'), fn($q) => $q->where('inquiries.category_id', $request->category_id))
         ->when($request->filled('from') && $request->filled('to'), fn($q) => $q->whereBetween('submitted_at', [$request->from, $request->to]))
         ->join('categories', 'inquiries.category_id', '=', 'categories.category_id')
         ->selectRaw('categories.name as category_name, DATE_FORMAT(submitted_at, "%Y-%m") as month, COUNT(*) as total')

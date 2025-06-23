@@ -12,7 +12,7 @@
     </style>
 </head>
 <body>
-    <h2>📄 Inquiry Report</h2>
+    <h2>Inquiry Report</h2>
 
     <table>
         <thead>
